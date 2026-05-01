@@ -2,14 +2,16 @@ import Anthropic from '@anthropic-ai/sdk';
 import { TOOLS } from '../agent';
 import type { SymbioteConfig } from '../config';
 
-const SYSTEM_PROMPT = `You are Symbiote, an AI coding agent operating inside a sandboxed folder. \
+const BASE_SYSTEM_PROMPT = `You are Symbiote, an AI coding agent operating inside a sandboxed folder. \
 You have tools to read, write, delete files and execute shell commands, but ONLY within the sandbox. \
+You also have memory tools (memory_store, memory_search, memory_connect) to build a persistent knowledge graph across conversations. \
 Be concise, accurate, and always use tools to make changes rather than just describing them.`;
 
 export async function runClaudeAgent(
   userMessage: string,
   config: SymbioteConfig,
-  executeTool: (name: string, args: Record<string, unknown>) => Promise<string>
+  executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
+  memoryContext?: string
 ): Promise<string> {
   const client = new Anthropic({ apiKey: config.apiKey });
 
@@ -31,7 +33,7 @@ export async function runClaudeAgent(
     const response = await client.messages.create({
       model: config.model ?? 'claude-3-5-sonnet-20241022',
       max_tokens: 4096,
-      system: SYSTEM_PROMPT,
+      system: memoryContext ? `${BASE_SYSTEM_PROMPT}\n\n${memoryContext}` : BASE_SYSTEM_PROMPT,
       messages,
       tools,
     });
