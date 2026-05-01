@@ -6,6 +6,7 @@ import { runCodexAgent } from './providers/codex';
 import { runGeminiAgent } from './providers/gemini';
 import { runCLIAgent } from './providers/cli';
 import { storeNode, searchNodes, connectNodes, buildMemoryContext } from './memory';
+import { logToolCall } from './logger';
 
 export interface ToolParam {
   type: string;
@@ -122,39 +123,47 @@ export async function executeTool(
   name: string,
   args: Record<string, unknown>
 ): Promise<string> {
+  let result: string;
   try {
     switch (name) {
       case 'list_dir': {
         const dirPath = (args.path as string | undefined) ?? '.';
         const entries = sandbox.listDir(dirPath);
-        return JSON.stringify({ entries });
+        result = JSON.stringify({ entries });
+        break;
       }
       case 'read_file': {
         const content = sandbox.readFile(args.path as string);
-        return JSON.stringify({ content });
+        result = JSON.stringify({ content });
+        break;
       }
       case 'write_file': {
         sandbox.writeFile(args.path as string, args.content as string);
-        return JSON.stringify({ success: true });
+        result = JSON.stringify({ success: true });
+        break;
       }
       case 'delete_file': {
         sandbox.deleteFile(args.path as string);
-        return JSON.stringify({ success: true });
+        result = JSON.stringify({ success: true });
+        break;
       }
       case 'exec': {
-        const result = await sandbox.sandboxedExec(args.command as string);
-        return JSON.stringify(result);
+        const execResult = await sandbox.sandboxedExec(args.command as string);
+        result = JSON.stringify(execResult);
+        break;
       }
       case 'memory_store': {
         const tags = args.tags
           ? (args.tags as string).split(',').map((t) => t.trim()).filter(Boolean)
           : [];
         const node = storeNode(SANDBOX_PATH, args.type as string, args.content as string, tags);
-        return JSON.stringify({ id: node.id, message: 'Memory stored.' });
+        result = JSON.stringify({ id: node.id, message: 'Memory stored.' });
+        break;
       }
       case 'memory_search': {
         const results = searchNodes(SANDBOX_PATH, args.query as string);
-        return JSON.stringify(results);
+        result = JSON.stringify(results);
+        break;
       }
       case 'memory_connect': {
         const edge = connectNodes(
@@ -163,14 +172,17 @@ export async function executeTool(
           args.toId as string,
           args.relation as string
         );
-        return JSON.stringify({ id: edge.id, message: 'Connection created.' });
+        result = JSON.stringify({ id: edge.id, message: 'Connection created.' });
+        break;
       }
       default:
-        return JSON.stringify({ error: `Unknown tool: ${name}` });
+        result = JSON.stringify({ error: `Unknown tool: ${name}` });
     }
   } catch (err) {
-    return JSON.stringify({ error: (err as Error).message });
+    result = JSON.stringify({ error: (err as Error).message });
   }
+  logToolCall(name, args, result!);
+  return result!;
 }
 
 export async function runAgent(
@@ -182,7 +194,7 @@ export async function runAgent(
     executeTool(name, args);
 
   if (config.useCLI) {
-    return runCLIAgent(userMessage, config);
+    return runCLIAgent(userMessage, config, memoryContext);
   }
 
   switch (config.provider) {

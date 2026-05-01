@@ -3,6 +3,8 @@ import { Bot, Context } from 'grammy';
 import { SANDBOX_PATH } from './sandbox';
 import { SymbioteConfig } from './config';
 import { runAgent } from './agent';
+import { logUserMessage, logAgentResponse } from './logger';
+import { storeNode } from './memory';
 
 export interface PendingApproval {
   chatId: number;
@@ -124,6 +126,20 @@ export function createBot(config: SymbioteConfig): Bot {
     );
   });
 
+  bot.command('remember', async (ctx) => {
+    if (!isAuthorized(ctx)) {
+      await ctx.reply('❌ Unauthorized.');
+      return;
+    }
+    const text = (ctx.message?.text ?? '').replace(/^\/remember\s*/i, '').trim();
+    if (!text) {
+      await ctx.reply('Usage: /remember <text to remember>');
+      return;
+    }
+    const node = storeNode(SANDBOX_PATH, 'fact', text, []);
+    await safeSend(ctx, `🧠 Remembered: "${text}"\n<code>id: ${node.id}</code>`, true);
+  });
+
   bot.on('message:text', async (ctx) => {
     if (!isAuthorized(ctx)) {
       await ctx.reply('❌ Unauthorized. Send /start first to authorise this chat.');
@@ -131,12 +147,16 @@ export function createBot(config: SymbioteConfig): Bot {
     }
 
     const userMessage = ctx.message.text;
+    const chatId = ctx.chat!.id;
+    logUserMessage(chatId, ctx.from?.username, userMessage);
     const statusMsg = await ctx.reply('⏳ Working…');
 
     try {
       const response = await runAgent(userMessage, config);
+      logAgentResponse(chatId, response || '✅ Done.');
       await safeEdit(ctx, statusMsg.message_id, response || '✅ Done.');
     } catch (err) {
+      logAgentResponse(chatId, `ERROR: ${(err as Error).message}`);
       await safeEdit(
         ctx,
         statusMsg.message_id,
