@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import prompts from 'prompts';
-import { addAuthorizedChatId, addBlacklistedChatId, configExists, loadConfig, runSetupWizard, SymbioteConfig } from './config';
+import { addAuthorizedChatId, addBlacklistedChatId, changeProvider, configExists, loadConfig, removeAuthorizedChatId, removeBlacklistedChatId, runSetupWizard, SymbioteConfig } from './config';
 import { SANDBOX_PATH } from './sandbox';
 import { approvalEvents, createBot, PendingApproval } from './bot';
 
@@ -15,6 +15,102 @@ async function main(): Promise<void> {
     config = loadConfig();
     const mode = config.useCLI ? 'CLI' : 'API';
     console.log(`✅  Config loaded — provider: ${config.provider} (${mode})`);
+  }
+
+  // Main menu
+  while (true) {
+    const { action } = await prompts({
+      type: 'select',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        { title: '🤖  Start bot', value: 'start' },
+        { title: '👥  View users', value: 'users' },
+        { title: '🔄  Change provider', value: 'provider' },
+        { title: '🚪  Exit', value: 'exit' },
+      ],
+    });
+
+    if (action === undefined || action === 'exit') process.exit(0);
+    if (action === 'start') break;
+
+    if (action === 'users') {
+      while (true) {
+        const authorized = config.authorizedChatIds ?? [];
+        const blacklisted = config.blacklistedChatIds ?? [];
+
+        if (authorized.length === 0 && blacklisted.length === 0) {
+          console.log('\n👥  No users yet.\n');
+          break;
+        }
+
+        const userChoices = [
+          ...authorized.map(id => ({ title: `✅  ${id}  (authorized)`, value: `auth:${id}` })),
+          ...blacklisted.map(id => ({ title: `🚫  ${id}  (blacklisted)`, value: `bl:${id}` })),
+          { title: '← Back', value: 'back' },
+        ];
+
+        const { selected } = await prompts({
+          type: 'select',
+          name: 'selected',
+          message: 'Select a user to manage:',
+          choices: userChoices,
+        });
+
+        if (!selected || selected === 'back') break;
+
+        const isAuth = (selected as string).startsWith('auth:');
+        const chatId = parseInt((selected as string).split(':')[1], 10);
+
+        if (isAuth) {
+          const { userAction } = await prompts({
+            type: 'select',
+            name: 'userAction',
+            message: `Manage authorized user ${chatId}:`,
+            choices: [
+              { title: '🗑️  Remove authorization', value: 'remove' },
+              { title: '🚫  Move to blacklist', value: 'blacklist' },
+              { title: '← Back', value: 'back' },
+            ],
+          });
+          if (userAction === 'remove') {
+            removeAuthorizedChatId(chatId);
+            config = loadConfig();
+            console.log(`\n🗑️  Removed ${chatId} from authorized users.\n`);
+          } else if (userAction === 'blacklist') {
+            removeAuthorizedChatId(chatId);
+            addBlacklistedChatId(chatId);
+            config = loadConfig();
+            console.log(`\n🚫  Moved ${chatId} to blacklist.\n`);
+          }
+        } else {
+          const { userAction } = await prompts({
+            type: 'select',
+            name: 'userAction',
+            message: `Manage blacklisted user ${chatId}:`,
+            choices: [
+              { title: '🗑️  Remove from blacklist', value: 'remove' },
+              { title: '✅  Authorize', value: 'authorize' },
+              { title: '← Back', value: 'back' },
+            ],
+          });
+          if (userAction === 'remove') {
+            removeBlacklistedChatId(chatId);
+            config = loadConfig();
+            console.log(`\n🗑️  Removed ${chatId} from blacklist.\n`);
+          } else if (userAction === 'authorize') {
+            removeBlacklistedChatId(chatId);
+            addAuthorizedChatId(chatId);
+            config = loadConfig();
+            console.log(`\n✅  Authorized ${chatId}.\n`);
+          }
+        }
+      }
+    }
+
+    if (action === 'provider') {
+      config = await changeProvider(config);
+    }
   }
 
   const bot = createBot(config);

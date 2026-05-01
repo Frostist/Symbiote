@@ -52,6 +52,18 @@ export function addBlacklistedChatId(chatId: number): void {
   saveConfig(config);
 }
 
+export function removeAuthorizedChatId(chatId: number): void {
+  const config = loadConfig();
+  config.authorizedChatIds = (config.authorizedChatIds ?? []).filter(id => id !== chatId);
+  saveConfig(config);
+}
+
+export function removeBlacklistedChatId(chatId: number): void {
+  const config = loadConfig();
+  config.blacklistedChatIds = (config.blacklistedChatIds ?? []).filter(id => id !== chatId);
+  saveConfig(config);
+}
+
 function detectCLI(name: string): boolean {
   try {
     execSync(`which ${name}`, { stdio: 'ignore' });
@@ -59,6 +71,73 @@ function detectCLI(name: string): boolean {
   } catch {
     return false;
   }
+}
+
+export async function changeProvider(existing: SymbioteConfig): Promise<SymbioteConfig> {
+  const cliDetected: Record<Provider, boolean> = {
+    claude: detectCLI('claude'),
+    codex: detectCLI('codex'),
+    gemini: detectCLI('gemini'),
+  };
+
+  const providerChoices = [
+    { title: `Claude${cliDetected.claude ? '  ✓ CLI detected' : ''}`, value: 'claude' },
+    { title: `Codex / OpenAI${cliDetected.codex ? '  ✓ CLI detected' : ''}`, value: 'codex' },
+    { title: `Gemini${cliDetected.gemini ? '  ✓ CLI detected' : ''}`, value: 'gemini' },
+  ];
+
+  const { provider } = await prompts({
+    type: 'select',
+    name: 'provider',
+    message: 'Which AI provider do you want to use?',
+    choices: providerChoices,
+  });
+
+  if (!provider) return existing;
+
+  let useCLI = false;
+  let apiKey: string | undefined;
+
+  if (cliDetected[provider as Provider]) {
+    const { mode } = await prompts({
+      type: 'select',
+      name: 'mode',
+      message: `Use the ${provider} CLI or an API key?`,
+      choices: [
+        { title: 'Use CLI (already installed)', value: 'cli' },
+        { title: 'Use API key', value: 'api' },
+      ],
+    });
+    if (mode === undefined) return existing;
+    useCLI = mode === 'cli';
+  }
+
+  if (!useCLI) {
+    const providerLinks: Record<Provider, string> = {
+      claude: 'https://console.anthropic.com',
+      codex: 'https://platform.openai.com',
+      gemini: 'https://aistudio.google.com',
+    };
+    const { key } = await prompts({
+      type: 'password',
+      name: 'key',
+      message: `Enter your ${provider} API key (${providerLinks[provider as Provider]}):`,
+      validate: (v: string) => v.trim().length > 0 || 'API key cannot be empty',
+    });
+    if (key === undefined) return existing;
+    apiKey = (key as string).trim();
+  }
+
+  const updated: SymbioteConfig = {
+    ...existing,
+    provider: provider as Provider,
+    useCLI,
+    apiKey: useCLI ? undefined : apiKey,
+  };
+
+  saveConfig(updated);
+  console.log(`\n✅  Provider changed to ${String(provider)} (${useCLI ? 'CLI' : 'API'})\n`);
+  return updated;
 }
 
 export async function runSetupWizard(): Promise<SymbioteConfig> {
