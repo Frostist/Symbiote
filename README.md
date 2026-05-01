@@ -77,3 +77,18 @@ npm start          # run compiled output
   "apiKey": "sk-ant-..."
 }
 ```
+
+## Credits
+
+Symbiote is built on the shoulders of these open-source packages:
+
+| Package | Description |
+|---|---|
+| [grammy](https://grammy.dev) | Telegram Bot framework for Node.js |
+| [@anthropic-ai/sdk](https://github.com/anthropic-ai/anthropic-node) | Official Anthropic SDK for Claude API access |
+| [openai](https://github.com/openai/openai-node) | Official OpenAI SDK for GPT / Codex API access |
+| [@google/generative-ai](https://github.com/google/generative-ai-js) | Official Google SDK for Gemini API access |
+| [prompts](https://github.com/terkelg/prompts) | Lightweight, interactive CLI prompt library |
+| [ts-node](https://github.com/TypeStrong/ts-node) | TypeScript execution engine for Node.js |
+| [typescript](https://www.typescriptlang.org) | Typed superset of JavaScript |
+
