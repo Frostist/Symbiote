@@ -8,7 +8,7 @@ function buildCLICommand(provider: string, message: string): string {
     case 'claude':
       return `claude --output-format text -p '${escaped}'`;
     case 'codex':
-      return `CI=true codex --full-auto '${escaped}'`;
+      return `codex exec --dangerously-bypass-approvals-and-sandbox '${escaped}'`;
     case 'gemini':
       return `CI=true gemini -p '${escaped}'`;
     default:
@@ -25,7 +25,7 @@ export async function runCLIAgent(
 
   const parts: string[] = [];
   if (result.stdout.trim()) parts.push(result.stdout.trim());
-  if (result.stderr.trim()) parts.push(`[stderr]\n${result.stderr.trim()}`);
+  if (result.exitCode !== 0 && result.stderr.trim()) parts.push(`[stderr]\n${result.stderr.trim()}`);
 
   return parts.join('\n\n') || '✅ Done (no output).';
 }
