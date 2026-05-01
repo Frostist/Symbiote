@@ -21,7 +21,7 @@ export async function runCLIAgent(
   config: SymbioteConfig
 ): Promise<string> {
   const command = buildCLICommand(config.provider, userMessage);
-  const result = await sandboxedExec(command, 300_000);
+  const result = await sandboxedExec(command, 300_000, 'inherit');
 
   const parts: string[] = [];
   if (result.stdout.trim()) parts.push(result.stdout.trim());

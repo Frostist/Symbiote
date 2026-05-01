@@ -35,7 +35,11 @@ export interface ExecResult {
   exitCode: number;
 }
 
-export function sandboxedExec(command: string, timeoutMs = 300_000): Promise<ExecResult> {
+export function sandboxedExec(
+  command: string,
+  timeoutMs = 300_000,
+  stdin: 'pipe' | 'inherit' | 'ignore' = 'pipe'
+): Promise<ExecResult> {
   checkCommand(command);
 
   return new Promise((resolve, reject) => {
@@ -43,13 +47,14 @@ export function sandboxedExec(command: string, timeoutMs = 300_000): Promise<Exe
       cwd: SANDBOX_PATH,
       env: { ...process.env },
       timeout: timeoutMs,
+      stdio: [stdin, 'pipe', 'pipe'],
     });
 
     let stdout = '';
     let stderr = '';
 
-    child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
-    child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+    child.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
+    child.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
 
     child.on('close', (code: number | null) => {
       resolve({ stdout, stderr, exitCode: code ?? 1 });
