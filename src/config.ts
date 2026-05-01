@@ -7,7 +7,8 @@ export type Provider = 'claude' | 'codex' | 'gemini';
 
 export interface SymbioteConfig {
   telegramToken: string;
-  authorizedChatId?: number;
+  authorizedChatIds?: number[];
+  blacklistedChatIds?: number[];
   provider: Provider;
   useCLI: boolean;
   apiKey?: string;
@@ -23,7 +24,13 @@ export function configExists(): boolean {
 
 export function loadConfig(): SymbioteConfig {
   const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-  return JSON.parse(raw) as SymbioteConfig;
+  const config = JSON.parse(raw) as SymbioteConfig & { authorizedChatId?: number };
+  if (config.authorizedChatId !== undefined && !config.authorizedChatIds) {
+    config.authorizedChatIds = [config.authorizedChatId];
+    delete config.authorizedChatId;
+    saveConfig(config);
+  }
+  return config;
 }
 
 export function saveConfig(config: SymbioteConfig): void {
@@ -31,9 +38,17 @@ export function saveConfig(config: SymbioteConfig): void {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
 }
 
-export function saveAuthorizedChatId(chatId: number): void {
+export function addAuthorizedChatId(chatId: number): void {
   const config = loadConfig();
-  config.authorizedChatId = chatId;
+  if (!config.authorizedChatIds) config.authorizedChatIds = [];
+  if (!config.authorizedChatIds.includes(chatId)) config.authorizedChatIds.push(chatId);
+  saveConfig(config);
+}
+
+export function addBlacklistedChatId(chatId: number): void {
+  const config = loadConfig();
+  if (!config.blacklistedChatIds) config.blacklistedChatIds = [];
+  if (!config.blacklistedChatIds.includes(chatId)) config.blacklistedChatIds.push(chatId);
   saveConfig(config);
 }
 

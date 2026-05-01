@@ -1,7 +1,16 @@
+import { EventEmitter } from 'events';
 import { Bot, Context } from 'grammy';
 import { SANDBOX_PATH } from './sandbox';
-import { saveAuthorizedChatId, SymbioteConfig } from './config';
+import { SymbioteConfig } from './config';
 import { runAgent } from './agent';
+
+export interface PendingApproval {
+  chatId: number;
+  username?: string;
+  firstName?: string;
+}
+
+export const approvalEvents = new EventEmitter();
 
 const MAX_TELEGRAM_LENGTH = 4000;
 
@@ -52,26 +61,27 @@ export function createBot(config: SymbioteConfig): Bot {
   const bot = new Bot(config.telegramToken);
 
   const isAuthorized = (ctx: Context): boolean => {
-    if (!config.authorizedChatId) return false;
-    return ctx.chat?.id === config.authorizedChatId;
+    const chatId = ctx.chat?.id;
+    if (!chatId) return false;
+    return (config.authorizedChatIds ?? []).includes(chatId);
+  };
+
+  const isBlacklisted = (ctx: Context): boolean => {
+    const chatId = ctx.chat?.id;
+    if (!chatId) return false;
+    return (config.blacklistedChatIds ?? []).includes(chatId);
   };
 
   bot.command('start', async (ctx) => {
     const chatId = ctx.chat?.id;
     if (!chatId) return;
 
-    if (!config.authorizedChatId) {
-      config.authorizedChatId = chatId;
-      saveAuthorizedChatId(chatId);
-      await safeSend(
-        ctx,
-        `<b>🦠 Symbiote activated</b>\n\n` +
-          `<b>Sandbox:</b> <code>${escapeHtml(SANDBOX_PATH)}</code>\n` +
-          `<b>Provider:</b> <code>${config.provider}${config.useCLI ? ' (CLI)' : ' (API)'}</code>\n\n` +
-          `Send me any message and I'll get to work.`,
-        true
-      );
-    } else if (isAuthorized(ctx)) {
+    if (isBlacklisted(ctx)) {
+      await ctx.reply('❌ Unauthorized.');
+      return;
+    }
+
+    if (isAuthorized(ctx)) {
       await safeSend(
         ctx,
         `<b>🦠 Symbiote is running</b>\n\n` +
@@ -79,9 +89,15 @@ export function createBot(config: SymbioteConfig): Bot {
           `<b>Provider:</b> <code>${config.provider}${config.useCLI ? ' (CLI)' : ' (API)'}</code>`,
         true
       );
-    } else {
-      await ctx.reply('❌ Unauthorized.');
+      return;
     }
+
+    await ctx.reply('⏳ Authorization request sent to the bot owner. Please wait…');
+    approvalEvents.emit('pending', {
+      chatId,
+      username: ctx.from?.username,
+      firstName: ctx.from?.first_name,
+    } satisfies PendingApproval);
   });
 
   bot.command('sandbox', async (ctx) => {
