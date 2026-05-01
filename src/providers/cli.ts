@@ -1,9 +1,8 @@
 import { sandboxedExec } from '../sandbox';
 import type { SymbioteConfig } from '../config';
 
-function buildCLICommand(provider: string, message: string, memoryContext?: string): string {
-  const fullMessage = memoryContext ? `${memoryContext}\n\n${message}` : message;
-  const escaped = fullMessage.replace(/'/g, `'\\''`);
+function buildCLICommand(provider: string, message: string): string {
+  const escaped = message.replace(/'/g, `'\\''`);
 
   switch (provider) {
     case 'claude':
@@ -19,10 +18,9 @@ function buildCLICommand(provider: string, message: string, memoryContext?: stri
 
 export async function runCLIAgent(
   userMessage: string,
-  config: SymbioteConfig,
-  memoryContext?: string
+  config: SymbioteConfig
 ): Promise<string> {
-  const command = buildCLICommand(config.provider, userMessage, memoryContext);
+  const command = buildCLICommand(config.provider, userMessage);
   const result = await sandboxedExec(command, 300_000, 'inherit');
 
   const parts: string[] = [];

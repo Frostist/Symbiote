@@ -4,7 +4,6 @@ import { SANDBOX_PATH } from './sandbox';
 import { SymbioteConfig } from './config';
 import { runAgent } from './agent';
 import { logUserMessage, logAgentResponse } from './logger';
-import { storeNode } from './memory';
 
 export interface PendingApproval {
   chatId: number;
@@ -124,20 +123,6 @@ export function createBot(config: SymbioteConfig): Bot {
       `<b>Provider:</b> <code>${config.provider}${config.useCLI ? ' (CLI mode)' : ' (API mode)'}</code>`,
       true
     );
-  });
-
-  bot.command('remember', async (ctx) => {
-    if (!isAuthorized(ctx)) {
-      await ctx.reply('❌ Unauthorized.');
-      return;
-    }
-    const text = (ctx.message?.text ?? '').replace(/^\/remember\s*/i, '').trim();
-    if (!text) {
-      await ctx.reply('Usage: /remember <text to remember>');
-      return;
-    }
-    const node = storeNode(SANDBOX_PATH, 'fact', text, []);
-    await safeSend(ctx, `🧠 Remembered: "${text}"\n<code>id: ${node.id}</code>`, true);
   });
 
   bot.on('message:text', async (ctx) => {
