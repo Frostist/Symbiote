@@ -1,8 +1,23 @@
 {
-  "name": "symbiote",
-  "version": "0.1.0",
+  "name": "@frostist/symbiote",
+  "version": "1.0.0",
   "description": "Drop-in AI agent controlled via Telegram, sandboxed to its folder",
+  "keywords": [
+    "ai-telegram-harness"
+  ],
+  "homepage": "https://github.com/Frostist/Symbiote#readme",
+  "bugs": {
+    "url": "https://github.com/Frostist/Symbiote/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Frostist/Symbiote.git"
+  },
+  "license": "MIT",
+  "author": "Frostist",
+  "type": "commonjs",
   "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
     "symbiote": "dist/index.js"
   },
