@@ -6,11 +6,11 @@ function buildCLICommand(provider: string, message: string): string {
 
   switch (provider) {
     case 'claude':
-      return `claude --output-format text -p '${escaped}'`;
+      return `claude --dangerously-skip-permissions --output-format text -p '${escaped}'`;
     case 'codex':
       return `codex exec --dangerously-bypass-approvals-and-sandbox '${escaped}'`;
     case 'gemini':
-      return `CI=true gemini -p '${escaped}'`;
+      return `CI=true gemini --yolo -p '${escaped}'`;
     default:
       throw new Error(`No CLI command defined for provider: ${provider}`);
   }
