@@ -1,6 +1,6 @@
 {
   "name": "@frostist/symbiote",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Drop-in AI agent controlled via Telegram, sandboxed to its folder",
   "keywords": [
     "ai-telegram-harness"
