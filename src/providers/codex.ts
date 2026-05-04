@@ -46,11 +46,11 @@ export async function runCodexAgent(
       for (const toolCall of choice.message.tool_calls) {
         let args: Record<string, unknown> = {};
         try {
-          args = JSON.parse(toolCall.function.arguments) as Record<string, unknown>;
+          args = JSON.parse((toolCall as { function: { arguments: string } }).function.arguments) as Record<string, unknown>;
         } catch {
           args = {};
         }
-        const result = await executeTool(toolCall.function.name, args);
+        const result = await executeTool((toolCall as { function: { name: string } }).function.name, args);
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
