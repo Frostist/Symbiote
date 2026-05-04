@@ -3,6 +3,7 @@ import { Bot, Context } from 'grammy';
 import { SANDBOX_PATH } from './sandbox';
 import { SymbioteConfig } from './config';
 import { runAgent } from './agent';
+import { clearSession } from './sessions';
 import { logUserMessage, logAgentResponse } from './logger';
 
 export interface PendingApproval {
@@ -125,6 +126,16 @@ export function createBot(config: SymbioteConfig): Bot {
     );
   });
 
+  bot.command('newchat', async (ctx) => {
+    if (!isAuthorized(ctx)) {
+      await ctx.reply('❌ Unauthorized.');
+      return;
+    }
+    const chatId = ctx.chat?.id;
+    if (chatId) clearSession(chatId);
+    await ctx.reply('🆕 New session started. Your next message will begin a fresh conversation.');
+  });
+
   bot.on('message:text', async (ctx) => {
     if (!isAuthorized(ctx)) {
       await ctx.reply('❌ Unauthorized. Send /start first to authorise this chat.');
@@ -137,7 +148,7 @@ export function createBot(config: SymbioteConfig): Bot {
     const statusMsg = await ctx.reply('⏳ Working…');
 
     try {
-      const response = await runAgent(userMessage, config);
+      const response = await runAgent(userMessage, config, chatId);
       logAgentResponse(chatId, response || '✅ Done.');
       await safeEdit(ctx, statusMsg.message_id, response || '✅ Done.');
     } catch (err) {
