@@ -6,7 +6,7 @@ An AI agent you drop into any folder. It attaches to that folder, takes instruct
 
 ```
 cd /path/to/your/project
-npx symbiote (Not uploaded to npmjs yet)
+npx symbiote
 ```
 
 Symbiote locks its sandbox to the current directory at startup. Every file operation and shell command is validated against that path.
