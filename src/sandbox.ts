@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 
-export const SANDBOX_PATH: string = path.resolve(process.cwd(), '..');
+export const SANDBOX_PATH: string = path.resolve(process.cwd());
 
 export function validatePath(userPath: string): string {
   const resolved = path.resolve(SANDBOX_PATH, userPath);
