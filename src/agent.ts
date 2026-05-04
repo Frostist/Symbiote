@@ -125,13 +125,14 @@ export async function executeTool(
 
 export async function runAgent(
   userMessage: string,
-  config: SymbioteConfig
+  config: SymbioteConfig,
+  chatId: number
 ): Promise<string> {
   const toolExecutor = (name: string, args: Record<string, unknown>) =>
     executeTool(name, args);
 
   if (config.useCLI) {
-    return runCLIAgent(userMessage, config);
+    return runCLIAgent(userMessage, config, chatId);
   }
 
   switch (config.provider) {
